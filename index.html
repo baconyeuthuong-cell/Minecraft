@@ -3,98 +3,138 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Minecraft Mobile - Build & Mine</title>
+    <title>Minecraft Pro Developer Edition</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #87CEEB; touch-action: none; font-family: sans-serif; }
+        body { margin: 0; overflow: hidden; background: #87CEEB; touch-action: none; font-family: 'Courier New', Courier, monospace; }
         canvas { display: block; }
         
-        /* Điều khiển di chuyển */
-        #controls { position: absolute; bottom: 20px; left: 20px; display: grid; grid-template-columns: repeat(3, 55px); gap: 5px; }
-        .btn { width: 55px; height: 55px; background: rgba(255,255,255,0.2); border: 2px solid #fff; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; user-select: none; }
+        /* UI Controls */
+        #ui-wrapper { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        .interactive { pointer-events: auto; }
         
-        /* Nút hành động */
-        #action-btns { position: absolute; bottom: 80px; right: 25px; display: flex; flex-direction: column; gap: 12px; }
-        .action-btn { width: 65px; height: 65px; border-radius: 50%; font-weight: bold; font-size: 12px; color: white; border: 2px solid #fff; display: flex; align-items: center; justify-content: center; }
-        #mine-btn { background: rgba(255, 0, 0, 0.5); }
-        #build-btn { background: rgba(0, 120, 255, 0.5); }
-        #jump-btn { background: rgba(255, 255, 255, 0.3); }
-
-        /* Kho đồ */
-        #hotbar { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; background: rgba(0,0,0,0.6); padding: 4px; border: 2px solid #333; }
-        .slot { width: 40px; height: 40px; border: 2px solid #fff; margin: 0 3px; background: #2E7D32; } /* Mặc định chọn cỏ */
+        #controls { position: absolute; bottom: 20px; left: 20px; display: grid; grid-template-columns: repeat(3, 55px); gap: 5px; }
+        .btn { width: 55px; height: 55px; background: rgba(0,0,0,0.4); border: 2px solid #fff; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; user-select: none; }
+        
+        #action-btns { position: absolute; bottom: 90px; right: 25px; display: flex; flex-direction: column; gap: 15px; }
+        .action-btn { width: 70px; height: 70px; border-radius: 50%; font-weight: bold; border: 3px solid #fff; color: white; display: flex; align-items: center; justify-content: center; }
+        
+        /* Inventory System */
+        #hotbar { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; background: rgba(0,0,0,0.7); padding: 5px; border: 3px solid #555; }
+        .slot { width: 45px; height: 45px; border: 2px solid #888; margin: 0 3px; display: flex; align-items: center; justify-content: center; position: relative; }
+        .slot.active { border-color: #00ff00; box-shadow: 0 0 10px #00ff00; }
+        .item { width: 30px; height: 30px; pointer-events: none; }
+        .label { position: absolute; bottom: -1px; right: 2px; font-size: 10px; color: white; }
     </style>
 </head>
 <body>
 
-    <div id="controls">
-        <div></div><div class="btn" id="up">↑</div><div></div>
-        <div class="btn" id="left">←</div><div class="btn" style="font-size:10px">WALK</div><div class="btn" id="right">→</div>
-        <div></div><div class="btn" id="down">↓</div><div></div>
-    </div>
+    <div id="ui-wrapper">
+        <div id="controls" class="interactive">
+            <div></div><div class="btn" id="up">↑</div><div></div>
+            <div class="btn" id="left">←</div><div class="btn" style="font-size:10px">WALK</div><div class="btn" id="right">→</div>
+            <div></div><div class="btn" id="down">↓</div><div></div>
+        </div>
 
-    <div id="action-btns">
-        <div class="action-btn" id="build-btn">BUILD</div>
-        <div class="action-btn" id="mine-btn">MINE</div>
-        <div class="action-btn" id="jump-btn">JUMP</div>
-    </div>
+        <div id="action-btns" class="interactive">
+            <div class="action-btn" id="build-btn" style="background:#0078ff">BUILD</div>
+            <div class="action-btn" id="mine-btn" style="background:#ff0000">MINE</div>
+            <div class="action-btn" id="jump-btn" style="background:rgba(255,255,255,0.3)">JUMP</div>
+        </div>
 
-    <div id="hotbar"><div class="slot"></div></div>
+        <div id="hotbar" class="interactive">
+            <div class="slot active" data-type="grass"><div class="item" style="background:#2E7D32"></div></div>
+            <div class="slot" data-type="dirt"><div class="item" style="background:#8B4513"></div></div>
+            <div class="slot" data-type="stone"><div class="item" style="background:#808080"></div></div>
+            <div class="slot" data-type="wood"><div class="item" style="background:#5D4037"></div></div>
+            <div class="slot" data-type="sand"><div class="item" style="background:#EDC9AF"></div></div>
+        </div>
+    </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
+        // --- 1. CONFIG & MATERIALS ---
         const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x87CEEB);
+        scene.fog = new THREE.Fog(0x87CEEB, 15, 45);
+        
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        scene.add(new THREE.AmbientLight(0xffffff, 0.8));
-        const sun = new THREE.DirectionalLight(0xffffff, 0.5);
-        sun.position.set(10, 20, 10);
-        scene.add(sun);
+        const materials = {
+            grass: [new THREE.MeshLambertMaterial({color: 0x8B4513}), new THREE.MeshLambertMaterial({color: 0x8B4513}), new THREE.MeshLambertMaterial({color: 0x2E7D32}), new THREE.MeshLambertMaterial({color: 0x8B4513}), new THREE.MeshLambertMaterial({color: 0x8B4513}), new THREE.MeshLambertMaterial({color: 0x8B4513})],
+            dirt: new THREE.MeshLambertMaterial({color: 0x8B4513}),
+            stone: new THREE.MeshLambertMaterial({color: 0x808080}),
+            wood: new THREE.MeshLambertMaterial({color: 0x5D4037}),
+            leaf: new THREE.MeshLambertMaterial({color: 0x1B5E20}),
+            sand: new THREE.MeshLambertMaterial({color: 0xEDC9AF})
+        };
 
+        // --- 2. TERRAIN GENERATION (RUGGED) ---
         const blocks = [];
         const geo = new THREE.BoxGeometry(1, 1, 1);
-        const matGrass = [
-            new THREE.MeshLambertMaterial({color: 0x8B4513}), // cạnh
-            new THREE.MeshLambertMaterial({color: 0x8B4513}),
-            new THREE.MeshLambertMaterial({color: 0x2E7D32}), // TOP XANH
-            new THREE.MeshLambertMaterial({color: 0x8B4513}),
-            new THREE.MeshLambertMaterial({color: 0x8B4513}),
-            new THREE.MeshLambertMaterial({color: 0x8B4513})
-        ];
-        const matDirt = new THREE.MeshLambertMaterial({color: 0x8B4513}); // 6 mặt nâu
+        
+        function createBlock(x, y, z, type) {
+            const m = Array.isArray(materials[type]) ? materials[type] : materials[type];
+            const b = new THREE.Mesh(geo, m);
+            b.position.set(x, y, z);
+            b.userData.type = type;
+            scene.add(b);
+            blocks.push(b);
+        }
 
-        // Tạo đất 3 lớp
-        for(let x = -10; x < 10; x++) {
-            for(let z = -10; z < 10; z++) {
-                const b1 = new THREE.Mesh(geo, matGrass);
-                b1.position.set(x, 0, z);
-                scene.add(b1); blocks.push(b1);
-                
-                for(let y = -1; y >= -2; y--) {
-                    const b2 = new THREE.Mesh(geo, matDirt);
-                    b2.position.set(x, y, z);
-                    scene.add(b2); blocks.push(b2);
-                }
+        // Tạo địa hình gồ ghề đơn giản
+        for(let x = -12; x < 12; x++) {
+            for(let z = -12; z < 12; z++) {
+                let h = Math.floor(Math.sin(x/3) * Math.cos(z/3) * 1.5); // Độ gồ ghề
+                createBlock(x, h, z, 'grass');
+                createBlock(x, h-1, z, 'dirt');
+                createBlock(x, h-2, z, 'stone');
             }
         }
 
-        // Thêm Cây
-        function createTree(x, z) {
-            const trunk = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({color: 0x5D4037}));
-            trunk.scale.set(0.5, 3, 0.5); trunk.position.set(x, 2, z);
-            scene.add(trunk); blocks.push(trunk);
-            const leaf = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({color: 0x1B5E20}));
-            leaf.scale.set(2, 2, 2); leaf.position.set(x, 4, z);
-            scene.add(leaf); blocks.push(leaf);
+        // --- 3. VOXEL TREES (NHIỀU KHỐI) ---
+        function spawnTree(x, z) {
+            let hBase = Math.floor(Math.sin(x/3) * Math.cos(z/3) * 1.5);
+            // Thân cây (3-4 khối)
+            for(let i=1; i<=4; i++) createBlock(x, hBase + i, z, 'wood');
+            // Lá cây (Tán rộng)
+            for(let ox=-1; ox<=1; ox++) {
+                for(let oz=-1; oz<=1; oz++) {
+                    for(let oy=4; oy<=5; oy++) {
+                        if(ox === 0 && oz === 0 && oy === 4) continue;
+                        createBlock(x + ox, hBase + oy, z + oz, 'leaf');
+                    }
+                }
+            }
         }
-        for(let i=0; i<8; i++) createTree(Math.random()*16-8, Math.random()*16-8);
+        spawnTree(4, 4); spawnTree(-5, -3); spawnTree(2, -6);
 
-        // Camera & Điều khiển
-        camera.position.set(0, 2, 8);
+        // --- 4. PHYSICS & MOVEMENT ENGINE ---
+        camera.position.set(0, 5, 10);
         let yaw = 0, pitch = 0, vy = 0;
         let move = { fwd: false, bwd: false, lft: false, rgt: false };
+        let currentType = 'grass';
+
+        // Collision detection (Vật lý cơ bản)
+        function checkCollision(nextPos) {
+            const playerBox = new THREE.Box3().setFromCenterAndSize(nextPos, new THREE.Vector3(0.6, 1.8, 0.6));
+            for(let b of blocks) {
+                const bBox = new THREE.Box3().setFromObject(b);
+                if(playerBox.intersectsBox(bBox)) return true;
+            }
+            return false;
+        }
+
+        // Input
+        document.querySelectorAll('.slot').forEach(s => {
+            s.onclick = () => {
+                document.querySelectorAll('.slot').forEach(x => x.classList.remove('active'));
+                s.classList.add('active');
+                currentType = s.dataset.type;
+            };
+        });
 
         document.addEventListener('pointermove', (e) => {
             if (e.pointerType === 'touch' && e.clientX > window.innerWidth / 2) {
@@ -105,53 +145,74 @@
 
         const bind = (id, k) => {
             const el = document.getElementById(id);
-            el.addEventListener('pointerdown', (e) => { e.preventDefault(); move[k] = true; });
-            el.addEventListener('pointerup', () => move[k] = false);
+            el.onpointerdown = (e) => { e.preventDefault(); move[k] = true; };
+            el.onpointerup = () => move[k] = false;
         };
         bind('up', 'fwd'); bind('down', 'bwd'); bind('left', 'lft'); bind('right', 'rgt');
 
-        // LOGIC PHÁ & ĐẶT BLOCK
+        // Actions
         const ray = new THREE.Raycaster();
-        const getHit = () => {
+        const getPointed = () => {
             ray.setFromCamera(new THREE.Vector2(0, 0), camera);
             const hits = ray.intersectObjects(blocks);
             return hits.length > 0 && hits[0].distance < 5 ? hits[0] : null;
         };
 
         document.getElementById('mine-btn').onclick = () => {
-            const hit = getHit();
+            const hit = getPointed();
             if(hit) { scene.remove(hit.object); blocks.splice(blocks.indexOf(hit.object), 1); }
         };
 
         document.getElementById('build-btn').onclick = () => {
-            const hit = getHit();
+            const hit = getPointed();
             if(hit) {
-                const b = new THREE.Mesh(geo, matGrass);
-                // Đặt khối mới dựa trên mặt của khối bị chạm (hit.face.normal)
-                b.position.copy(hit.object.position).add(hit.face.normal);
-                scene.add(b); blocks.push(b);
+                const pos = hit.object.position.clone().add(hit.face.normal);
+                createBlock(pos.x, pos.y, pos.z, currentType);
             }
         };
 
-        document.getElementById('jump-btn').onclick = () => { if(camera.position.y <= 2.1) vy = 0.15; };
+        document.getElementById('jump-btn').onclick = () => { if(vy === 0) vy = 0.15; };
 
-        function animate() {
-            requestAnimationFrame(animate);
+        // Ambient light
+        scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+        const sun = new THREE.DirectionalLight(0xffffff, 0.4);
+        sun.position.set(10, 20, 10);
+        scene.add(sun);
+
+        // Game Loop
+        function update() {
+            requestAnimationFrame(update);
             const s = 0.12, d = new THREE.Vector3();
             camera.getWorldDirection(d); d.y = 0; d.normalize();
             const r = new THREE.Vector3().crossVectors(camera.up, d).normalize();
 
-            if (move.fwd) camera.position.addScaledVector(d, s);
-            if (move.bwd) camera.position.addScaledVector(d, -s);
-            if (move.lft) camera.position.addScaledVector(r, s);
-            if (move.rgt) camera.position.addScaledVector(r, -s);
+            let next = camera.position.clone();
+            if (move.fwd) next.addScaledVector(d, s);
+            if (move.bwd) next.addScaledVector(d, -s);
+            if (move.lft) next.addScaledVector(r, s);
+            if (move.rgt) next.addScaledVector(r, -s);
 
-            camera.position.y += vy;
-            if(camera.position.y > 2) vy -= 0.01; else { camera.position.y = 2; vy = 0; }
+            // Gravity & Ground Physics
+            vy -= 0.008;
+            next.y += vy;
+
+            // Check Collision for Y (Ground/Ceiling)
+            if(!checkCollision(next)) {
+                camera.position.copy(next);
+            } else {
+                if(vy < 0) vy = 0; // Stop falling
+                next.y = camera.position.y; 
+                // Check Collision for XZ (Walls)
+                if(!checkCollision(next)) camera.position.copy(next);
+            }
+
+            // Fall protection
+            if(camera.position.y < -10) camera.position.set(0, 5, 0);
+
             camera.rotation.set(pitch, yaw, 0, 'YXZ');
             renderer.render(scene, camera);
         }
-        animate();
+        update();
     </script>
 </body>
 </html>

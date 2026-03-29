@@ -2,288 +2,108 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Minecraft Web - Improved</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>My Simple Minecraft</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #87CEEB; }
+        body { margin: 0; background: #87CEEB; }
         canvas { display: block; }
-        #instructions {
-            position: absolute; top: 10px; left: 10px;
-            color: white; background: rgba(0,0,0,0.5);
-            padding: 10px; font-family: sans-serif; pointer-events: none;
-        }
     </style>
 </head>
 <body>
-    <div id="instructions">Vuốt để xoay camera - Chạm 2 ngón để di chuyển</div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
-        // 1. Khởi tạo cảnh và Camera
+        // 1. THIẾT LẬP CƠ BẢN
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x87CEEB);
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        const renderer = new THREE.WebGLRenderer();
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        // 2. Ánh sáng (Để đất không bị tối đen)
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
-        scene.add(ambientLight);
-        const sunLight = new THREE.DirectionalLight(0xffffff, 0.5);
-        sunLight.position.set(5, 10, 7);
-        scene.add(sunLight);
+        // Ánh sáng đơn giản để nhìn rõ màu
+        const light = new THREE.DirectionalLight(0xffffff, 1);
+        light.position.set(5, 10, 5);
+        scene.add(light);
+        scene.add(new THREE.AmbientLight(0xffffff, 0.5));
 
-        // 3. Tạo vật liệu cho Khối Cỏ (Mặt trên xanh, các mặt bên màu nâu đất)
-        const loader = new THREE.TextureLoader();
-        const materials = [
-            new THREE.MeshLambertMaterial({ color: 0x8B4513 }), // các mặt bên
-            new THREE.MeshLambertMaterial({ color: 0x8B4513 }),
-            new THREE.MeshLambertMaterial({ color: 0x228B22 }), // mặt trên (Xanh lá)
-            new THREE.MeshLambertMaterial({ color: 0x8B4513 }), // mặt dưới
-            new THREE.MeshLambertMaterial({ color: 0x8B4513 }),
-            new THREE.MeshLambertMaterial({ color: 0x8B4513 })
+        // 2. TẠO KHỐI ĐẤT CỎ (Dễ hiểu hơn)
+        const geometry = new THREE.BoxGeometry(1, 1, 1);
+        
+        // Định nghĩa màu: 0 là mặt bên, 2 là mặt trên (Xanh), 3 là mặt dưới
+        const materialCỏ = [
+            new THREE.MeshLambertMaterial({color: 0x8B4513}), // bên
+            new THREE.MeshLambertMaterial({color: 0x8B4513}), // bên
+            new THREE.MeshLambertMaterial({color: 0x228B22}), // TRÊN (XANH)
+            new THREE.MeshLambertMaterial({color: 0x8B4513}), // dưới
+            new THREE.MeshLambertMaterial({color: 0x8B4513}), // bên
+            new THREE.MeshLambertMaterial({color: 0x8B4513})  // bên
         ];
 
-        // 4. Tạo mặt đất (10x10 khối)
-        const boxGeo = new THREE.BoxGeometry(1, 1, 1);
+        // Lát nền đất 10x10
         for(let x = -5; x < 5; x++) {
             for(let z = -5; z < 5; z++) {
-                const block = new THREE.Mesh(boxGeo, materials);
-                block.position.set(x, 0, z);
-                scene.add(block);
+                const ground = new THREE.Mesh(geometry, materialCỏ);
+                ground.position.set(x, 0, z);
+                scene.add(ground);
             }
         }
 
-        // 5. Hàm tạo Cây (Thân gỗ nâu, lá xanh)
-        function createTree(x, z) {
-            const trunkGeo = new THREE.BoxGeometry(0.4, 2, 0.4);
-            const trunkMat = new THREE.MeshLambertMaterial({ color: 0x5D4037 });
-            const trunk = new THREE.Mesh(trunkGeo, trunkMat);
-            trunk.position.set(x, 1.5, z);
-            scene.add(trunk);
+        // 3. TẠO CÂY (Thủ công cho dễ sửa)
+        function taoCay(x, z) {
+            // Thân cây
+            const go = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({color: 0x5D4037}));
+            go.scale.set(0.4, 2, 0.4);
+            go.position.set(x, 1.5, z);
+            scene.add(go);
 
-            const leafGeo = new THREE.BoxGeometry(1.5, 1.5, 1.5);
-            const leafMat = new THREE.MeshLambertMaterial({ color: 0x2E7D32 });
-            const leaves = new THREE.Mesh(leafGeo, leafMat);
-            leaves.position.set(x, 3, z);
-            scene.add(leaves);
+            // Lá cây
+            const la = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({color: 0x006400}));
+            la.scale.set(1.5, 1.5, 1.5);
+            la.position.set(x, 3, z);
+            scene.add(la);
         }
-        
-        // Đặt vài cái cây
-        createTree(2, 2);
-        createTree(-3, -1);
-        createTree(0, -4);
 
-        camera.position.set(0, 5, 10);
+        taoCay(2, 2);   // Cây 1
+        taoCay(-3, -2); // Cây 2
+
+        camera.position.set(0, 5, 8);
         camera.lookAt(0, 0, 0);
 
-        // 6. Xử lý Camera (Sửa lỗi xoay nghiêng và kẹt vuốt)
-        let lon = 0, lat = 0;
-        let isUserInteracting = false;
-        let onPointerDownPointerX = 0, onPointerDownPointerY = 0;
-        let onPointerDownLon = 0, onPointerDownLat = 0;
+        // 4. ĐIỀU KHIỂN CAMERA (Vuốt đơn giản)
+        let isDragging = false;
+        let previousMouseX = 0;
+        let previousMouseY = 0;
 
         document.addEventListener('pointerdown', (e) => {
-            isUserInteracting = true;
-            onPointerDownPointerX = e.clientX;
-            onPointerDownPointerY = e.clientY;
-            onPointerDownLon = lon;
-            onPointerDownLat = lat;
+            isDragging = true;
+            previousMouseX = e.clientX;
+            previousMouseY = e.clientY;
         });
 
         document.addEventListener('pointermove', (e) => {
-            if (isUserInteracting) {
-                lon = (onPointerDownPointerX - e.clientX) * 0.1 + onPointerDownLon;
-                lat = (e.clientY - onPointerDownPointerY) * 0.1 + onPointerDownLat;
-                // Giới hạn góc nhìn để không bị kẹt khi vuốt xuống hoặc lên quá đà
-                lat = Math.max(-85, Math.min(85, lat)); 
-            }
-        });
+            if (isDragging) {
+                let deltaX = e.clientX - previousMouseX;
+                let deltaY = e.clientY - previousMouseY;
 
-        document.addEventListener('pointerup', () => isUserInteracting = false);
-
-        function animate() {
-            requestAnimationFrame(animate);
-            
-            // Cập nhật hướng nhìn camera dựa trên tọa độ lon/lat
-            const phi = THREE.MathUtils.degToRad(90 - lat);
-            const theta = THREE.MathUtils.degToRad(lon);
-            const target = new THREE.Vector3();
-            target.setFromSphericalCoords(10, phi, theta);
-            camera.lookAt(target);
-
-            renderer.render(scene, camera);
-        }
-        animate();
-
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-    </script>
-</body>
-</html>
-            width: 70px; height: 70px; border-radius: 50%;
-            background: rgba(255,255,255,0.5); color: black;
-            font-weight: bold; display: flex; align-items: center; justify-content: center;
-        }
-
-        /* Kho đồ */
-        #hotbar {
-            position: absolute; bottom: 10px; left: 50%;
-            transform: translateX(-50%); display: flex; gap: 5px;
-            background: rgba(0,0,0,0.4); padding: 5px; border-radius: 5px; z-index: 20;
-        }
-        .slot {
-            width: 35px; height: 35px; border: 2px solid #555;
-            display: flex; align-items: center; justify-content: center; font-size: 12px;
-        }
-        .slot.active { border-color: white; background: rgba(255,255,255,0.3); }
-    </style>
-</head>
-<body>
-
-    <div id="crosshair"></div>
-
-    <div id="controls-ui">
-        <div></div><div class="btn" id="btn-up">▲</div><div></div>
-        <div class="btn" id="btn-left">◀</div><div class="btn" id="btn-down">▼</div><div class="btn" id="btn-right">▶</div>
-    </div>
-
-    <div id="action-ui">
-        <div class="action-btn" id="btn-jump">JUMP</div>
-        <div class="action-btn" id="btn-place" style="background: #4CAF50;">BUILD</div>
-        <div class="action-btn" id="btn-break" style="background: #f44336;">BREAK</div>
-    </div>
-
-    <div id="hotbar">
-        <div class="slot active" onclick="selectSlot(0)" style="background: #4CAF50;"></div>
-        <div class="slot" onclick="selectSlot(1)" style="background: #808080;"></div>
-        <div class="slot" onclick="selectSlot(2)" style="background: #EDC9AF;"></div>
-        <div class="slot" onclick="selectSlot(3)" style="background: #5D4037;"></div>
-    </div>
-
-    <script type="importmap">
-        { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
-    </script>
-
-    <script type="module">
-        import * as THREE from 'three';
-
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x87CEEB);
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: false }); // Tắt antialias để mượt hơn trên đt
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(renderer.domElement);
-
-        const light = new THREE.AmbientLight(0xffffff, 1);
-        scene.add(light);
-
-        // --- Biến điều khiển Mobile ---
-        let move = { f: false, b: false, l: false, r: false };
-        let velocity = new THREE.Vector3();
-        let canJump = true;
-        let rotation = { x: 0, y: 0 };
-
-        // Xoay màn hình (Touch để nhìn xung quanh)
-        let touchStart = new THREE.Vector2();
-        window.addEventListener('touchstart', e => {
-            touchStart.set(e.touches[0].pageX, e.touches[0].pageY);
-        });
-        window.addEventListener('touchmove', e => {
-            const deltaX = e.touches[0].pageX - touchStart.x;
-            const deltaY = e.touches[0].pageY - touchStart.y;
-            camera.rotation.y -= deltaX * 0.005;
-            camera.rotation.x -= deltaY * 0.005;
-            camera.rotation.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, camera.rotation.x));
-            touchStart.set(e.touches[0].pageX, e.touches[0].pageY);
-        });
-
-        // Gán sự kiện nút bấm
-        const bindBtn = (id, prop) => {
-            const el = document.getElementById(id);
-            el.addEventListener('touchstart', () => move[prop] = true);
-            el.addEventListener('touchend', () => move[prop] = false);
-        };
-        bindBtn('btn-up', 'f'); bindBtn('btn-down', 'b');
-        bindBtn('btn-left', 'l'); bindBtn('btn-right', 'r');
-        document.getElementById('btn-jump').addEventListener('touchstart', () => { if(canJump){ velocity.y = 5; canJump = false; }});
-
-        // --- Logic Thế giới & Khối ---
-        const boxGeo = new THREE.BoxGeometry(1, 1, 1);
-        const materials = [
-            new THREE.MeshLambertMaterial({color: 0x4CAF50}),
-            new THREE.MeshLambertMaterial({color: 0x808080}),
-            new THREE.MeshLambertMaterial({color: 0xEDC9AF}),
-            new THREE.MeshLambertMaterial({color: 0x5D4037})
-        ];
-        let currentMat = 0;
-        window.selectSlot = (i) => {
-            currentMat = i;
-            document.querySelectorAll('.slot').forEach((s, idx) => s.classList.toggle('active', idx === i));
-        };
-
-        const blocks = [];
-        for(let x=-10; x<10; x++) {
-            for(let z=-10; z<10; z++) {
-                const h = Math.floor(Math.sin(x*0.5) + Math.cos(z*0.5));
-                const b = new THREE.Mesh(boxGeo, materials[0]);
-                b.position.set(x, h, z);
-                scene.add(b);
-                blocks.push(b);
-            }
-        }
-
-        // --- Đập & Đặt khối ---
-        const raycaster = new THREE.Raycaster();
-        const action = (type) => {
-            raycaster.setFromCamera(new THREE.Vector2(0,0), camera);
-            const intersects = raycaster.intersectObjects(blocks);
-            if(intersects.length > 0) {
-                const intersect = intersects[0];
-                if(type === 'break') {
-                    scene.remove(intersect.object);
-                    blocks.splice(blocks.indexOf(intersect.object), 1);
-                } else {
-                    const pos = intersect.object.position.clone().add(intersect.face.normal);
-                    const b = new THREE.Mesh(boxGeo, materials[currentMat]);
-                    b.position.copy(pos);
-                    scene.add(b);
-                    blocks.push(b);
+                // Xoay quanh trục Y (trái phải)
+                camera.rotation.y -= deltaX * 0.01;
+                
+                // Ngước lên xuống (trục X) - Giới hạn để không bị lật
+                let nextRotationX = camera.rotation.x - deltaY * 0.01;
+                if (nextRotationX > -1.2 && nextRotationX < 0.5) {
+                    camera.rotation.x = nextRotationX;
                 }
-            }
-        };
-        document.getElementById('btn-break').addEventListener('touchstart', () => action('break'));
-        document.getElementById('btn-place').addEventListener('touchstart', () => action('place'));
 
-        // --- Loop ---
-        camera.position.set(0, 5, 5);
+                previousMouseX = e.clientX;
+                previousMouseY = e.clientY;
+            }
+        });
+
+        document.addEventListener('pointerup', () => isDragging = false);
+
         function animate() {
             requestAnimationFrame(animate);
-            
-            // Di chuyển
-            const speed = 0.1;
-            if(move.f) camera.translateZ(-speed);
-            if(move.b) camera.translateZ(speed);
-            if(move.l) camera.translateX(-speed);
-            if(move.r) camera.translateX(speed);
-
-            // Trọng lực đơn giản
-            velocity.y -= 0.2;
-            camera.position.y += velocity.y * 0.05;
-            if(camera.position.y < 3) { camera.position.y = 3; velocity.y = 0; canJump = true; }
-
             renderer.render(scene, camera);
         }
         animate();
-
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
     </script>
 </body>
 </html>

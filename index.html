@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Minecraft Pro: Day/Night & Layers</title>
+    <title>Minecraft Pro - Fixed Terrain</title>
     <style>
         * { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; outline: none; -webkit-tap-highlight-color: transparent; touch-action: none; }
         body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
@@ -11,7 +11,7 @@
         #ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
         .interactive { pointer-events: auto; }
         #controls { position: absolute; bottom: 25px; left: 25px; display: grid; grid-template-columns: repeat(3, 55px); gap: 8px; }
-        .btn { width: 55px; height: 55px; background: rgba(0,0,0,0.5); border: 2px solid #fff; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; font-size: 22px; }
+        .btn { width: 55px; height: 55px; background: rgba(0,0,0,0.6); border: 2px solid #fff; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; font-size: 22px; }
         #action-btns { position: absolute; bottom: 100px; right: 25px; display: flex; flex-direction: column; gap: 15px; }
         .action-btn { width: 75px; height: 75px; border-radius: 50%; border: 3px solid #fff; color: white; font-weight: bold; display: flex; align-items: center; justify-content: center; font-size: 14px; }
         #hotbar { position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); display: flex; background: rgba(0,0,0,0.8); padding: 6px; border-radius: 5px; border: 2px solid #444; }
@@ -25,7 +25,7 @@
     <div id="ui">
         <div id="controls" class="interactive">
             <div></div><div class="btn" id="up">↑</div><div></div>
-            <div class="btn" id="left">←</div><div class="btn" style="font-size:10px">MOVE</div><div class="btn" id="right">→</div>
+            <div class="btn" id="left">←</div><div class="btn" style="font-size:10px">WALK</div><div class="btn" id="right">→</div>
             <div></div><div class="btn" id="down">↓</div><div></div>
         </div>
         <div id="action-btns" class="interactive">
@@ -49,13 +49,14 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        // --- NGÀY VÀ ĐÊM ---
+        // --- HỆ THỐNG NGÀY ĐÊM ---
         let time = 0;
         const sunLight = new THREE.DirectionalLight(0xffffff, 1);
         scene.add(sunLight);
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
         scene.add(ambientLight);
 
+        // --- VẬT LIỆU ---
         const blocks = [];
         const geo = new THREE.BoxGeometry(1, 1, 1);
         const mats = {
@@ -66,29 +67,65 @@
             leaf: new THREE.MeshLambertMaterial({color: 0x1B5E20})
         };
 
-        // --- TẠO ĐỊA HÌNH NHIỀU LỚP ---
+        // --- QUẢN LÝ CHUNK & ĐỊA HÌNH 3 LỚP ---
+        const CHUNK_SIZE = 8;
+        const RENDER_DIST = 3;
+        const loadedChunks = new Set();
+
         function addBlock(x, y, z, type) {
             const b = new THREE.Mesh(geo, mats[type]);
             b.position.set(x, y, z);
-            scene.add(b); blocks.push(b);
+            scene.add(b);
+            blocks.push(b);
         }
 
-        const CHUNK = 10;
-        for(let x = -CHUNK; x < CHUNK; x++) {
-            for(let z = -CHUNK; z < CHUNK; z++) {
-                const h = Math.floor(Math.sin(x/4) * Math.cos(z/4) * 2);
-                addBlock(x, h, z, 'grass');   // Lớp 1: Cỏ
-                addBlock(x, h-1, z, 'dirt'); // Lớp 2: Đất
-                addBlock(x, h-2, z, 'stone');// Lớp 3: Đá
+        function createChunk(cx, cz) {
+            const key = `${cx},${cz}`;
+            if (loadedChunks.has(key)) return;
+            
+            for(let x = 0; x < CHUNK_SIZE; x++) {
+                for(let z = 0; z < CHUNK_SIZE; z++) {
+                    const wx = cx * CHUNK_SIZE + x;
+                    const wz = cz * CHUNK_SIZE + z;
+                    // Độ cao gồ ghề
+                    const h = Math.floor(Math.sin(wx/6) * Math.cos(wz/6) * 3);
+                    
+                    addBlock(wx, h, wz, 'grass');   // Lớp 1
+                    addBlock(wx, h-1, wz, 'dirt'); // Lớp 2
+                    addBlock(wx, h-2, wz, 'stone');// Lớp 3 (Đá)
+
+                    if(Math.random() > 0.98) spawnTree(wx, h + 1, wz);
+                }
+            }
+            loadedChunks.add(key);
+        }
+
+        function spawnTree(x, y, z) {
+            for(let i=0; i<4; i++) addBlock(x, y+i, z, 'wood');
+            for(let ox=-1; ox<=1; ox++) {
+                for(let oz=-1; oz<=1; oz++) {
+                    addBlock(x+ox, y+3, z+oz, 'leaf');
+                }
+            }
+        }
+
+        function updateTerrain() {
+            const pCX = Math.floor(camera.position.x / CHUNK_SIZE);
+            const pCZ = Math.floor(camera.position.z / CHUNK_SIZE);
+            for(let x = -RENDER_DIST; x <= RENDER_DIST; x++) {
+                for(let z = -RENDER_DIST; z <= RENDER_DIST; z++) {
+                    createChunk(pCX + x, pCZ + z);
+                }
             }
         }
 
         // --- VẬT LÝ & ĐIỀU KHIỂN ---
-        let py = 5, vy = 0, yaw = 0, pitch = 0;
+        let py = 10, vy = 0, yaw = 0, pitch = 0;
         let move = { fwd: false, bwd: false, lft: false, rgt: false };
         let selected = 'grass';
 
-        // Xoay camera
+        camera.position.set(0, py + 1.6, 0); // Khởi đầu trên cao để ko kẹt vào đất
+
         document.addEventListener('pointermove', e => {
             if (e.clientX > window.innerWidth / 2) {
                 yaw -= e.movementX * 0.005;
@@ -132,17 +169,17 @@
         function animate() {
             requestAnimationFrame(animate);
             
-            // Xử lý Ngày/Đêm
-            time += 0.001; 
+            // Ngày đêm
+            time += 0.002;
             const sunY = Math.sin(time);
             sunLight.position.set(Math.cos(time) * 10, sunY * 10, 5);
             sunLight.intensity = Math.max(0, sunY);
-            const skyCol = new THREE.Color().setHSL(0.6, 0.5, Math.max(0.1, sunY * 0.5 + 0.2));
+            const skyCol = new THREE.Color().setHSL(0.6, 0.5, Math.max(0.05, sunY * 0.5 + 0.2));
             scene.background = skyCol;
             scene.fog.color = skyCol;
 
             // Di chuyển
-            const s = 0.1, d = new THREE.Vector3();
+            const s = 0.12, d = new THREE.Vector3();
             camera.getWorldDirection(d); d.y = 0; d.normalize();
             const r = new THREE.Vector3().crossVectors(camera.up, d).normalize();
             if (move.fwd) camera.position.addScaledVector(d, s);
@@ -150,20 +187,19 @@
             if (move.lft) camera.position.addScaledVector(r, s);
             if (move.rgt) camera.position.addScaledVector(r, -s);
 
-            // Trọng lực & Chết/Hồi sinh
+            // Trọng lực & Respawn
             vy -= 0.008; py += vy;
-            let ground = -10;
+            let ground = -20;
             for(let b of blocks) {
-                if(Math.abs(b.position.x - camera.position.x) < 0.5 && Math.abs(b.position.z - camera.position.z) < 0.5) {
+                if(Math.abs(b.position.x - camera.position.x) < 0.4 && Math.abs(b.position.z - camera.position.z) < 0.4) {
                     ground = Math.max(ground, b.position.y + 1);
                 }
             }
             if(py < ground) { py = ground; vy = 0; }
-            
-            // Cơ chế rớt vực: Nếu rơi quá sâu, hồi sinh tại (0, 5, 0)
-            if(py < -15) { py = 5; camera.position.set(0, py + 1.6, 0); vy = 0; }
+            if(py < -25) { py = 10; camera.position.set(0, py + 1.6, 0); vy = 0; } // Respawn
 
-            camera.position.y = py + 1.6; // Cao 2 block
+            updateTerrain();
+            camera.position.y = py + 1.6; // Mắt cao 2 block
             camera.rotation.set(pitch, yaw, 0, 'YXZ');
             renderer.render(scene, camera);
         }

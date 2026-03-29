@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Minecraft Mobile Web</title>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: sans-serif; touch-action: none; }
+        canvas { display: block; }
+        
+        /* Tâm ngắm */
+        #crosshair {
+            position: absolute; top: 50%; left: 50%;
+            width: 15px; height: 15px; border: 2px solid white;
+            border-radius: 50%; transform: translate(-50%, -50%);
+            pointer-events: none; z-index: 10;
+        }
+
+        /* Nút di chuyển (Joystick giả) */
+        #controls-ui {
+            position: absolute; bottom: 20px; left: 20px;
+            display: grid; grid-template-columns: repeat(3, 50px);
+            gap: 5px; z-index: 20;
+        }
+        .btn {
+            width: 50px; height: 50px; background: rgba(255,255,255,0.3);
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 10px; color: white; user-select: none;
+        }
+
+        /* Nút hành động bên phải */
+        #action-ui {
+            position: absolute; bottom: 20px; right: 20px;
+            display: flex; flex-direction: column; gap: 10px; z-index: 20;
+        }
+        .action-btn {
+            width: 70px; height: 70px; border-radius: 50%;
+            background: rgba(255,255,255,0.5); color: black;
+            font-weight: bold; display: flex; align-items: center; justify-content: center;
+        }
+
+        /* Kho đồ */
+        #hotbar {
+            position: absolute; bottom: 10px; left: 50%;
+            transform: translateX(-50%); display: flex; gap: 5px;
+            background: rgba(0,0,0,0.4); padding: 5px; border-radius: 5px; z-index: 20;
+        }
+        .slot {
+            width: 35px; height: 35px; border: 2px solid #555;
+            display: flex; align-items: center; justify-content: center; font-size: 12px;
+        }
+        .slot.active { border-color: white; background: rgba(255,255,255,0.3); }
+    </style>
+</head>
+<body>
+
+    <div id="crosshair"></div>
+
+    <div id="controls-ui">
+        <div></div><div class="btn" id="btn-up">▲</div><div></div>
+        <div class="btn" id="btn-left">◀</div><div class="btn" id="btn-down">▼</div><div class="btn" id="btn-right">▶</div>
+    </div>
+
+    <div id="action-ui">
+        <div class="action-btn" id="btn-jump">JUMP</div>
+        <div class="action-btn" id="btn-place" style="background: #4CAF50;">BUILD</div>
+        <div class="action-btn" id="btn-break" style="background: #f44336;">BREAK</div>
+    </div>
+
+    <div id="hotbar">
+        <div class="slot active" onclick="selectSlot(0)" style="background: #4CAF50;"></div>
+        <div class="slot" onclick="selectSlot(1)" style="background: #808080;"></div>
+        <div class="slot" onclick="selectSlot(2)" style="background: #EDC9AF;"></div>
+        <div class="slot" onclick="selectSlot(3)" style="background: #5D4037;"></div>
+    </div>
+
+    <script type="importmap">
+        { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x87CEEB);
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: false }); // Tắt antialias để mượt hơn trên đt
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        const light = new THREE.AmbientLight(0xffffff, 1);
+        scene.add(light);
+
+        // --- Biến điều khiển Mobile ---
+        let move = { f: false, b: false, l: false, r: false };
+        let velocity = new THREE.Vector3();
+        let canJump = true;
+        let rotation = { x: 0, y: 0 };
+
+        // Xoay màn hình (Touch để nhìn xung quanh)
+        let touchStart = new THREE.Vector2();
+        window.addEventListener('touchstart', e => {
+            touchStart.set(e.touches[0].pageX, e.touches[0].pageY);
+        });
+        window.addEventListener('touchmove', e => {
+            const deltaX = e.touches[0].pageX - touchStart.x;
+            const deltaY = e.touches[0].pageY - touchStart.y;
+            camera.rotation.y -= deltaX * 0.005;
+            camera.rotation.x -= deltaY * 0.005;
+            camera.rotation.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, camera.rotation.x));
+            touchStart.set(e.touches[0].pageX, e.touches[0].pageY);
+        });
+
+        // Gán sự kiện nút bấm
+        const bindBtn = (id, prop) => {
+            const el = document.getElementById(id);
+            el.addEventListener('touchstart', () => move[prop] = true);
+            el.addEventListener('touchend', () => move[prop] = false);
+        };
+        bindBtn('btn-up', 'f'); bindBtn('btn-down', 'b');
+        bindBtn('btn-left', 'l'); bindBtn('btn-right', 'r');
+        document.getElementById('btn-jump').addEventListener('touchstart', () => { if(canJump){ velocity.y = 5; canJump = false; }});
+
+        // --- Logic Thế giới & Khối ---
+        const boxGeo = new THREE.BoxGeometry(1, 1, 1);
+        const materials = [
+            new THREE.MeshLambertMaterial({color: 0x4CAF50}),
+            new THREE.MeshLambertMaterial({color: 0x808080}),
+            new THREE.MeshLambertMaterial({color: 0xEDC9AF}),
+            new THREE.MeshLambertMaterial({color: 0x5D4037})
+        ];
+        let currentMat = 0;
+        window.selectSlot = (i) => {
+            currentMat = i;
+            document.querySelectorAll('.slot').forEach((s, idx) => s.classList.toggle('active', idx === i));
+        };
+
+        const blocks = [];
+        for(let x=-10; x<10; x++) {
+            for(let z=-10; z<10; z++) {
+                const h = Math.floor(Math.sin(x*0.5) + Math.cos(z*0.5));
+                const b = new THREE.Mesh(boxGeo, materials[0]);
+                b.position.set(x, h, z);
+                scene.add(b);
+                blocks.push(b);
+            }
+        }
+
+        // --- Đập & Đặt khối ---
+        const raycaster = new THREE.Raycaster();
+        const action = (type) => {
+            raycaster.setFromCamera(new THREE.Vector2(0,0), camera);
+            const intersects = raycaster.intersectObjects(blocks);
+            if(intersects.length > 0) {
+                const intersect = intersects[0];
+                if(type === 'break') {
+                    scene.remove(intersect.object);
+                    blocks.splice(blocks.indexOf(intersect.object), 1);
+                } else {
+                    const pos = intersect.object.position.clone().add(intersect.face.normal);
+                    const b = new THREE.Mesh(boxGeo, materials[currentMat]);
+                    b.position.copy(pos);
+                    scene.add(b);
+                    blocks.push(b);
+                }
+            }
+        };
+        document.getElementById('btn-break').addEventListener('touchstart', () => action('break'));
+        document.getElementById('btn-place').addEventListener('touchstart', () => action('place'));
+
+        // --- Loop ---
+        camera.position.set(0, 5, 5);
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // Di chuyển
+            const speed = 0.1;
+            if(move.f) camera.translateZ(-speed);
+            if(move.b) camera.translateZ(speed);
+            if(move.l) camera.translateX(-speed);
+            if(move.r) camera.translateX(speed);
+
+            // Trọng lực đơn giản
+            velocity.y -= 0.2;
+            camera.position.y += velocity.y * 0.05;
+            if(camera.position.y < 3) { camera.position.y = 3; velocity.y = 0; canJump = true; }
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>

@@ -2,108 +2,125 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>My Simple Minecraft</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Minecraft World - Expanded</title>
     <style>
-        body { margin: 0; background: #87CEEB; }
-        canvas { display: block; }
+        body { margin: 0; overflow: hidden; background: #87CEEB; touch-action: none; }
+        #info { position: absolute; top: 10px; width: 100%; text-align: center; color: white; font-family: sans-serif; pointer-events: none; text-shadow: 1px 1px 2px black; }
     </style>
 </head>
 <body>
+    <div id="info">Vuốt màn hình để xoay nhìn xung quanh</div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
-        // 1. THIẾT LẬP CƠ BẢN
+        // --- 1. KHỞI TẠO THẾ GIỚI ---
         const scene = new THREE.Scene();
+        scene.fog = new THREE.Fog(0x87CEEB, 10, 50); // Thêm sương mù cho đẹp
+
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer();
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
         document.body.appendChild(renderer.domElement);
 
-        // Ánh sáng đơn giản để nhìn rõ màu
-        const light = new THREE.DirectionalLight(0xffffff, 1);
-        light.position.set(5, 10, 5);
+        // Ánh sáng mặt trời
+        const light = new THREE.DirectionalLight(0xffffff, 1.2);
+        light.position.set(10, 20, 10);
         scene.add(light);
-        scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+        scene.add(new THREE.AmbientLight(0xffffff, 0.6));
 
-        // 2. TẠO KHỐI ĐẤT CỎ (Dễ hiểu hơn)
-        const geometry = new THREE.BoxGeometry(1, 1, 1);
-        
-        // Định nghĩa màu: 0 là mặt bên, 2 là mặt trên (Xanh), 3 là mặt dưới
-        const materialCỏ = [
-            new THREE.MeshLambertMaterial({color: 0x8B4513}), // bên
-            new THREE.MeshLambertMaterial({color: 0x8B4513}), // bên
-            new THREE.MeshLambertMaterial({color: 0x228B22}), // TRÊN (XANH)
-            new THREE.MeshLambertMaterial({color: 0x8B4513}), // dưới
-            new THREE.MeshLambertMaterial({color: 0x8B4513}), // bên
-            new THREE.MeshLambertMaterial({color: 0x8B4513})  // bên
+        // --- 2. TẠO MẶT ĐẤT RỘNG LỚN ---
+        const geo = new THREE.BoxGeometry(1, 1, 1);
+        const matCo = [
+            new THREE.MeshLambertMaterial({color: 0x8B4513}), // Cạnh nâu
+            new THREE.MeshLambertMaterial({color: 0x8B4513}), 
+            new THREE.MeshLambertMaterial({color: 0x2E7D32}), // TRÊN XANH ĐẬM
+            new THREE.MeshLambertMaterial({color: 0x8B4513}), // Dưới
+            new THREE.MeshLambertMaterial({color: 0x8B4513}), 
+            new THREE.MeshLambertMaterial({color: 0x8B4513})
         ];
 
-        // Lát nền đất 10x10
-        for(let x = -5; x < 5; x++) {
-            for(let z = -5; z < 5; z++) {
-                const ground = new THREE.Mesh(geometry, materialCỏ);
-                ground.position.set(x, 0, z);
-                scene.add(ground);
+        // Tạo nền đất 20x20 khối cho rộng
+        for(let x = -10; x < 10; x++) {
+            for(let z = -10; z < 10; z++) {
+                const block = new THREE.Mesh(geo, matCo);
+                block.position.set(x, 0, z);
+                scene.add(block);
             }
         }
 
-        // 3. TẠO CÂY (Thủ công cho dễ sửa)
+        // --- 3. HÀM TẠO CÂY NGẪU NHIÊN ---
         function taoCay(x, z) {
-            // Thân cây
-            const go = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({color: 0x5D4037}));
-            go.scale.set(0.4, 2, 0.4);
-            go.position.set(x, 1.5, z);
-            scene.add(go);
+            // Thân cây cao thấp khác nhau tí cho tự nhiên
+            const chieuCao = 2 + Math.random();
+            const trunk = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({color: 0x5D4037}));
+            trunk.scale.set(0.4, chieuCao, 0.4);
+            trunk.position.set(x, chieuCao/2 + 0.5, z);
+            scene.add(trunk);
 
-            // Lá cây
-            const la = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({color: 0x006400}));
-            la.scale.set(1.5, 1.5, 1.5);
-            la.position.set(x, 3, z);
-            scene.add(la);
+            // Lá cây tròn/vuông
+            const leaves = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({color: 0x1B5E20}));
+            leaves.scale.set(1.8, 1.8, 1.8);
+            leaves.position.set(x, chieuCao + 1, z);
+            scene.add(leaves);
         }
 
-        taoCay(2, 2);   // Cây 1
-        taoCay(-3, -2); // Cây 2
+        // Rải 15 cái cây ngẫu nhiên
+        for(let i = 0; i < 15; i++) {
+            let rx = Math.floor(Math.random() * 16) - 8;
+            let rz = Math.floor(Math.random() * 16) - 8;
+            if(rx !== 0 || rz !== 0) taoCay(rx, rz);
+        }
 
-        camera.position.set(0, 5, 8);
-        camera.lookAt(0, 0, 0);
-
-        // 4. ĐIỀU KHIỂN CAMERA (Vuốt đơn giản)
-        let isDragging = false;
-        let previousMouseX = 0;
-        let previousMouseY = 0;
+        // --- 4. HỆ THỐNG CAMERA VUỐT SIÊU MƯỢT ---
+        camera.position.set(0, 4, 12);
+        let lon = 0, lat = -20; 
+        let isUserInteracting = false;
+        let onPointerDownPointerX = 0, onPointerDownPointerY = 0;
+        let onPointerDownLon = 0, onPointerDownLat = 0;
 
         document.addEventListener('pointerdown', (e) => {
-            isDragging = true;
-            previousMouseX = e.clientX;
-            previousMouseY = e.clientY;
+            isUserInteracting = true;
+            onPointerDownPointerX = e.clientX;
+            onPointerDownPointerY = e.clientY;
+            onPointerDownLon = lon;
+            onPointerDownLat = lat;
         });
 
         document.addEventListener('pointermove', (e) => {
-            if (isDragging) {
-                let deltaX = e.clientX - previousMouseX;
-                let deltaY = e.clientY - previousMouseY;
-
-                // Xoay quanh trục Y (trái phải)
-                camera.rotation.y -= deltaX * 0.01;
+            if (isUserInteracting) {
+                // Tốc độ xoay (0.2) bạn có thể chỉnh to hơn để xoay nhanh hơn
+                lon = (onPointerDownPointerX - e.clientX) * 0.2 + onPointerDownLon;
+                lat = (e.clientY - onPointerDownPointerY) * 0.2 + onPointerDownLat;
                 
-                // Ngước lên xuống (trục X) - Giới hạn để không bị lật
-                let nextRotationX = camera.rotation.x - deltaY * 0.01;
-                if (nextRotationX > -1.2 && nextRotationX < 0.5) {
-                    camera.rotation.x = nextRotationX;
-                }
-
-                previousMouseX = e.clientX;
-                previousMouseY = e.clientY;
+                // Giới hạn để không nhìn xuyên xuống dưới chân hoặc lộn ngược
+                lat = Math.max(-60, Math.min(20, lat));
             }
         });
 
-        document.addEventListener('pointerup', () => isDragging = false);
+        document.addEventListener('pointerup', () => isUserInteracting = false);
 
         function animate() {
             requestAnimationFrame(animate);
+
+            // Tính toán hướng nhìn của camera
+            const phi = THREE.MathUtils.degToRad(90 - lat);
+            const theta = THREE.MathUtils.degToRad(lon);
+
+            const target = new THREE.Vector3();
+            target.setFromSphericalCoords(10, phi, theta);
+            camera.lookAt(target);
+
             renderer.render(scene, camera);
         }
         animate();
+
+        // Tự động chỉnh khi xoay điện thoại
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
     </script>
 </body>
 </html>

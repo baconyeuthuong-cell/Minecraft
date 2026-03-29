@@ -3,146 +3,139 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Minecraft Pro Developer Edition</title>
+    <title>Minecraft Pro 2-Block Height</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #87CEEB; touch-action: none; font-family: 'Courier New', Courier, monospace; }
+        /* Chống chọn văn bản và các hiệu ứng trình duyệt mặc định */
+        * { 
+            -webkit-touch-callout: none; 
+            -webkit-user-select: none; 
+            user-select: none; 
+            outline: none;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: none;
+        }
+        body { margin: 0; overflow: hidden; background: #87CEEB; font-family: sans-serif; }
         canvas { display: block; }
         
-        /* UI Controls */
-        #ui-wrapper { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        #ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
         .interactive { pointer-events: auto; }
+
+        /* Controls */
+        #controls { position: absolute; bottom: 25px; left: 25px; display: grid; grid-template-columns: repeat(3, 55px); gap: 8px; }
+        .btn { width: 55px; height: 55px; background: rgba(0,0,0,0.5); border: 2px solid #fff; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; font-size: 22px; }
         
-        #controls { position: absolute; bottom: 20px; left: 20px; display: grid; grid-template-columns: repeat(3, 55px); gap: 5px; }
-        .btn { width: 55px; height: 55px; background: rgba(0,0,0,0.4); border: 2px solid #fff; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; user-select: none; }
-        
-        #action-btns { position: absolute; bottom: 90px; right: 25px; display: flex; flex-direction: column; gap: 15px; }
-        .action-btn { width: 70px; height: 70px; border-radius: 50%; font-weight: bold; border: 3px solid #fff; color: white; display: flex; align-items: center; justify-content: center; }
-        
-        /* Inventory System */
-        #hotbar { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; background: rgba(0,0,0,0.7); padding: 5px; border: 3px solid #555; }
-        .slot { width: 45px; height: 45px; border: 2px solid #888; margin: 0 3px; display: flex; align-items: center; justify-content: center; position: relative; }
-        .slot.active { border-color: #00ff00; box-shadow: 0 0 10px #00ff00; }
-        .item { width: 30px; height: 30px; pointer-events: none; }
-        .label { position: absolute; bottom: -1px; right: 2px; font-size: 10px; color: white; }
+        #action-btns { position: absolute; bottom: 100px; right: 25px; display: flex; flex-direction: column; gap: 15px; }
+        .action-btn { width: 75px; height: 75px; border-radius: 50%; border: 3px solid #fff; color: white; font-weight: bold; display: flex; align-items: center; justify-content: center; font-size: 14px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+
+        #hotbar { position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); display: flex; background: rgba(0,0,0,0.8); padding: 6px; border-radius: 5px; border: 2px solid #444; }
+        .slot { width: 45px; height: 45px; border: 2px solid #777; margin: 0 4px; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+        .slot.active { border-color: #00ff00; background: rgba(255,255,255,0.1); transform: scale(1.1); }
+        .item { width: 30px; height: 30px; }
     </style>
 </head>
-<body>
+<body oncontextmenu="return false;">
 
-    <div id="ui-wrapper">
+    <div id="ui">
         <div id="controls" class="interactive">
             <div></div><div class="btn" id="up">↑</div><div></div>
-            <div class="btn" id="left">←</div><div class="btn" style="font-size:10px">WALK</div><div class="btn" id="right">→</div>
+            <div class="btn" id="left">←</div><div class="btn" style="font-size:10px">MOVE</div><div class="btn" id="right">→</div>
             <div></div><div class="btn" id="down">↓</div><div></div>
         </div>
 
         <div id="action-btns" class="interactive">
-            <div class="action-btn" id="build-btn" style="background:#0078ff">BUILD</div>
-            <div class="action-btn" id="mine-btn" style="background:#ff0000">MINE</div>
-            <div class="action-btn" id="jump-btn" style="background:rgba(255,255,255,0.3)">JUMP</div>
+            <div class="action-btn" id="build-btn" style="background: #1a73e8;">BUILD</div>
+            <div class="action-btn" id="mine-btn" style="background: #d93025;">MINE</div>
+            <div class="action-btn" id="jump-btn" style="background: rgba(255,255,255,0.3);">JUMP</div>
         </div>
 
         <div id="hotbar" class="interactive">
             <div class="slot active" data-type="grass"><div class="item" style="background:#2E7D32"></div></div>
-            <div class="slot" data-type="dirt"><div class="item" style="background:#8B4513"></div></div>
             <div class="slot" data-type="stone"><div class="item" style="background:#808080"></div></div>
-            <div class="slot" data-type="wood"><div class="item" style="background:#5D4037"></div></div>
             <div class="slot" data-type="sand"><div class="item" style="background:#EDC9AF"></div></div>
+            <div class="slot" data-type="wood"><div class="item" style="background:#5D4037"></div></div>
+            <div class="slot" data-type="leaf"><div class="item" style="background:#1B5E20"></div></div>
         </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
-        // --- 1. CONFIG & MATERIALS ---
+        // --- KHỞI TẠO ENGINE ---
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x87CEEB);
-        scene.fog = new THREE.Fog(0x87CEEB, 15, 45);
-        
+        scene.fog = new THREE.Fog(0x87CEEB, 15, 40);
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        const materials = {
-            grass: [new THREE.MeshLambertMaterial({color: 0x8B4513}), new THREE.MeshLambertMaterial({color: 0x8B4513}), new THREE.MeshLambertMaterial({color: 0x2E7D32}), new THREE.MeshLambertMaterial({color: 0x8B4513}), new THREE.MeshLambertMaterial({color: 0x8B4513}), new THREE.MeshLambertMaterial({color: 0x8B4513})],
-            dirt: new THREE.MeshLambertMaterial({color: 0x8B4513}),
-            stone: new THREE.MeshLambertMaterial({color: 0x808080}),
-            wood: new THREE.MeshLambertMaterial({color: 0x5D4037}),
-            leaf: new THREE.MeshLambertMaterial({color: 0x1B5E20}),
-            sand: new THREE.MeshLambertMaterial({color: 0xEDC9AF})
-        };
-
-        // --- 2. TERRAIN GENERATION (RUGGED) ---
         const blocks = [];
+        const CHUNK_SIZE = 8;
+        const RENDER_DIST = 2;
+        const loadedChunks = new Set();
         const geo = new THREE.BoxGeometry(1, 1, 1);
         
-        function createBlock(x, y, z, type) {
-            const m = Array.isArray(materials[type]) ? materials[type] : materials[type];
-            const b = new THREE.Mesh(geo, m);
-            b.position.set(x, y, z);
-            b.userData.type = type;
-            scene.add(b);
-            blocks.push(b);
-        }
+        const mats = {
+            grass: [new THREE.MeshLambertMaterial({color: 0x8B4513}), new THREE.MeshLambertMaterial({color: 0x8B4513}), new THREE.MeshLambertMaterial({color: 0x2E7D32}), new THREE.MeshLambertMaterial({color: 0x8B4513}), new THREE.MeshLambertMaterial({color: 0x8B4513}), new THREE.MeshLambertMaterial({color: 0x8B4513})],
+            stone: new THREE.MeshLambertMaterial({color: 0x808080}),
+            sand: new THREE.MeshLambertMaterial({color: 0xEDC9AF}),
+            wood: new THREE.MeshLambertMaterial({color: 0x5D4037}),
+            leaf: new THREE.MeshLambertMaterial({color: 0x1B5E20})
+        };
 
-        // Tạo địa hình gồ ghề đơn giản
-        for(let x = -12; x < 12; x++) {
-            for(let z = -12; z < 12; z++) {
-                let h = Math.floor(Math.sin(x/3) * Math.cos(z/3) * 1.5); // Độ gồ ghề
-                createBlock(x, h, z, 'grass');
-                createBlock(x, h-1, z, 'dirt');
-                createBlock(x, h-2, z, 'stone');
+        // --- HỆ THỐNG MAP VÔ TẬN ---
+        function createChunk(cx, cz) {
+            const key = `${cx},${cz}`;
+            if (loadedChunks.has(key)) return;
+            
+            for(let x = 0; x < CHUNK_SIZE; x++) {
+                for(let z = 0; z < CHUNK_SIZE; z++) {
+                    const wx = cx * CHUNK_SIZE + x;
+                    const wz = cz * CHUNK_SIZE + z;
+                    const h = Math.floor(Math.sin(wx/5) * Math.cos(wz/5) * 2);
+                    
+                    addBlock(wx, h, wz, 'grass');
+                    if(Math.random() > 0.985) spawnTree(wx, h + 1, wz);
+                }
             }
+            loadedChunks.add(key);
         }
 
-        // --- 3. VOXEL TREES (NHIỀU KHỐI) ---
-        function spawnTree(x, z) {
-            let hBase = Math.floor(Math.sin(x/3) * Math.cos(z/3) * 1.5);
-            // Thân cây (3-4 khối)
-            for(let i=1; i<=4; i++) createBlock(x, hBase + i, z, 'wood');
-            // Lá cây (Tán rộng)
+        function addBlock(x, y, z, type) {
+            const b = new THREE.Mesh(geo, mats[type]);
+            b.position.set(x, y, z);
+            scene.add(b); blocks.push(b);
+            return b;
+        }
+
+        function spawnTree(x, y, z) {
+            for(let i=0; i<4; i++) addBlock(x, y+i, z, 'wood'); // Thân cây cao hơn
             for(let ox=-1; ox<=1; ox++) {
                 for(let oz=-1; oz<=1; oz++) {
-                    for(let oy=4; oy<=5; oy++) {
-                        if(ox === 0 && oz === 0 && oy === 4) continue;
-                        createBlock(x + ox, hBase + oy, z + oz, 'leaf');
+                    for(let oy=3; oy<=4; oy++) {
+                        if(Math.abs(ox)+Math.abs(oz) === 2 && oy === 4) continue;
+                        addBlock(x+ox, y+oy, z+oz, 'leaf');
                     }
                 }
             }
         }
-        spawnTree(4, 4); spawnTree(-5, -3); spawnTree(2, -6);
 
-        // --- 4. PHYSICS & MOVEMENT ENGINE ---
-        camera.position.set(0, 5, 10);
+        // --- VẬT LÝ & CHIỀU CAO NHÂN VẬT ---
+        // Cao 2 block: Chân ở y, mắt ở y + 1.6
+        let py = 2; // Vị trí chân khởi đầu
+        camera.position.set(0, py + 1.6, 0); 
+        
         let yaw = 0, pitch = 0, vy = 0;
         let move = { fwd: false, bwd: false, lft: false, rgt: false };
-        let currentType = 'grass';
+        let selectedType = 'grass';
 
-        // Collision detection (Vật lý cơ bản)
-        function checkCollision(nextPos) {
-            const playerBox = new THREE.Box3().setFromCenterAndSize(nextPos, new THREE.Vector3(0.6, 1.8, 0.6));
-            for(let b of blocks) {
-                const bBox = new THREE.Box3().setFromObject(b);
-                if(playerBox.intersectsBox(bBox)) return true;
-            }
-            return false;
-        }
-
-        // Input
-        document.querySelectorAll('.slot').forEach(s => {
-            s.onclick = () => {
-                document.querySelectorAll('.slot').forEach(x => x.classList.remove('active'));
-                s.classList.add('active');
-                currentType = s.dataset.type;
-            };
-        });
-
+        // Camera xoay
         document.addEventListener('pointermove', (e) => {
-            if (e.pointerType === 'touch' && e.clientX > window.innerWidth / 2) {
-                yaw -= e.movementX * 0.006;
-                pitch = Math.max(-1.4, Math.min(1.4, pitch - e.movementY * 0.006));
+            if (e.clientX > window.innerWidth / 2) {
+                yaw -= e.movementX * 0.005;
+                pitch = Math.max(-1.5, Math.min(1.5, pitch - e.movementY * 0.005));
             }
         });
 
+        // Điều khiển
         const bind = (id, k) => {
             const el = document.getElementById(id);
             el.onpointerdown = (e) => { e.preventDefault(); move[k] = true; };
@@ -150,67 +143,96 @@
         };
         bind('up', 'fwd'); bind('down', 'bwd'); bind('left', 'lft'); bind('right', 'rgt');
 
-        // Actions
+        // Hành động
         const ray = new THREE.Raycaster();
-        const getPointed = () => {
-            ray.setFromCamera(new THREE.Vector2(0, 0), camera);
+        const getHit = () => {
+            ray.setFromCamera(new THREE.Vector2(0,0), camera);
             const hits = ray.intersectObjects(blocks);
             return hits.length > 0 && hits[0].distance < 5 ? hits[0] : null;
         };
 
-        document.getElementById('mine-btn').onclick = () => {
-            const hit = getPointed();
+        document.getElementById('mine-btn').onpointerdown = (e) => {
+            e.preventDefault();
+            const hit = getHit();
             if(hit) { scene.remove(hit.object); blocks.splice(blocks.indexOf(hit.object), 1); }
         };
 
-        document.getElementById('build-btn').onclick = () => {
-            const hit = getPointed();
+        document.getElementById('build-btn').onpointerdown = (e) => {
+            e.preventDefault();
+            const hit = getHit();
             if(hit) {
                 const pos = hit.object.position.clone().add(hit.face.normal);
-                createBlock(pos.x, pos.y, pos.z, currentType);
+                addBlock(pos.x, pos.y, pos.z, selectedType);
             }
         };
 
-        document.getElementById('jump-btn').onclick = () => { if(vy === 0) vy = 0.15; };
+        document.getElementById('jump-btn').onpointerdown = (e) => {
+            e.preventDefault();
+            if(vy === 0) vy = 0.15; 
+        };
 
-        // Ambient light
-        scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-        const sun = new THREE.DirectionalLight(0xffffff, 0.4);
-        sun.position.set(10, 20, 10);
-        scene.add(sun);
+        // Kho đồ
+        document.querySelectorAll('.slot').forEach(s => {
+            s.onpointerdown = () => {
+                document.querySelectorAll('.slot').forEach(x => x.classList.remove('active'));
+                s.classList.add('active');
+                selectedType = s.dataset.type;
+            };
+        });
 
-        // Game Loop
-        function update() {
-            requestAnimationFrame(update);
+        scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+
+        function animate() {
+            requestAnimationFrame(animate);
             const s = 0.12, d = new THREE.Vector3();
             camera.getWorldDirection(d); d.y = 0; d.normalize();
             const r = new THREE.Vector3().crossVectors(camera.up, d).normalize();
 
-            let next = camera.position.clone();
-            if (move.fwd) next.addScaledVector(d, s);
-            if (move.bwd) next.addScaledVector(d, -s);
-            if (move.lft) next.addScaledVector(r, s);
-            if (move.rgt) next.addScaledVector(r, -s);
+            // Di chuyển mặt phẳng XZ
+            if (move.fwd) camera.position.addScaledVector(d, s);
+            if (move.bwd) camera.position.addScaledVector(d, -s);
+            if (move.lft) camera.position.addScaledVector(r, s);
+            if (move.rgt) camera.position.addScaledVector(r, -s);
 
-            // Gravity & Ground Physics
+            // Trọng lực & Nhảy
             vy -= 0.008;
-            next.y += vy;
+            py += vy;
 
-            // Check Collision for Y (Ground/Ceiling)
-            if(!checkCollision(next)) {
-                camera.position.copy(next);
-            } else {
-                if(vy < 0) vy = 0; // Stop falling
-                next.y = camera.position.y; 
-                // Check Collision for XZ (Walls)
-                if(!checkCollision(next)) camera.position.copy(next);
+            // Tìm độ cao mặt đất tại vị trí hiện tại
+            let groundY = -5;
+            for(let b of blocks) {
+                if(Math.abs(b.position.x - camera.position.x) < 0.5 && 
+                   Math.abs(b.position.z - camera.position.z) < 0.5 &&
+                   b.position.y < py + 0.5) {
+                    groundY = Math.max(groundY, b.position.y + 1);
+                }
             }
 
-            // Fall protection
-            if(camera.position.y < -10) camera.position.set(0, 5, 0);
+            if(py < groundY) {
+                py = groundY;
+                vy = 0;
+            }
+
+            // Cập nhật vị trí camera (Mắt ở py + 1.6)
+            camera.position.y = py + 1.6;
+
+            // Render Map Vô tận
+            const pCX = Math.floor(camera.position.x / CHUNK_SIZE);
+            const pCZ = Math.floor(camera.position.z / CHUNK_SIZE);
+            for(let x = -RENDER_DIST; x <= RENDER_DIST; x++) {
+                for(let z = -RENDER_DIST; z <= RENDER_DIST; z++) {
+                    createChunk(pCX + x, pCZ + z);
+                }
+            }
 
             camera.rotation.set(pitch, yaw, 0, 'YXZ');
             renderer.render(scene, camera);
+        }
+        animate();
+    </script>
+</body>
+</html>
+era);
         }
         update();
     </script>
